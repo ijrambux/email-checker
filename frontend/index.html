@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<title>Email Password Dashboard</title>
+<style>
+body { margin:0; padding:0; background:black; font-family:sans-serif; color:white; }
+.bg {
+    position:fixed; top:0; left:0; width:200%; height:200%;
+    background:linear-gradient(45deg,#000,#001a33,#003366,#0055aa,#003366,#001a33,#000);
+    background-size:400% 400%; animation:moveBg 10s infinite linear;
+    z-index:-1;
+}
+@keyframes moveBg {0% {transform:translate(-25%,-25%);}50%{transform:translate(-75%,-75%);}100%{transform:translate(-25%,-25%);}}
+.container {
+    width:600px; margin:80px auto; padding:25px;
+    background:rgba(0,0,0,0.7); border-radius:15px;
+    box-shadow:0 0 25px #0055ff;
+}
+input, select, button {
+    width:100%; padding:14px; margin-top:12px;
+    border-radius:6px; border:none; font-size:17px;
+}
+button { background:#0055ff; color:white; font-weight:bold; cursor:pointer; }
+table { width:100%; margin-top:25px; border-collapse:collapse; }
+th, td { padding:12px; border-bottom:1px solid #0055ff; text-align:center; }
+th { background:#001a33; }
+.valid { color:#00ff00; font-weight:bold; }
+.invalid { color:#ff0000; font-weight:bold; }
+</style>
+</head>
+
+<body>
+
+<div class="bg"></div>
+
+<div class="container">
+    <h2>لوحة فحص كلمات مرور البريد الإلكتروني</h2>
+
+    <input id="email" type="email" placeholder="البريد الإلكتروني" />
+    <input id="password" type="password" placeholder="كلمة المرور" />
+
+    <select id="server">
+        <option value="imap.gmail.com">Gmail</option>
+        <option value="imap-mail.outlook.com">Outlook</option>
+        <option value="imap.mail.yahoo.com">Yahoo</option>
+    </select>
+
+    <button onclick="check()">فحص الآن</button>
+
+    <table>
+        <thead>
+            <tr><th>البريد</th><th>الخادم</th><th>الحالة</th></tr>
+        </thead>
+        <tbody id="results"></tbody>
+    </table>
+</div>
+
+<script>
+async function loadResults() {
+    const res = await fetch("/results");
+    const data = await res.json();
+
+    const tbody = document.getElementById("results");
+    tbody.innerHTML = "";
+
+    data.forEach(item => {
+        const row = document.createElement("tr");
+        row.innerHTML =
+            `<td>${item.email}</td>
+             <td>${item.server}</td>
+             <td class="${item.valid ? 'valid' : 'invalid'}">
+                ${item.valid ? "✔️ صحيحة" : "❌ خاطئة"}
+             </td>`;
+        tbody.appendChild(row);
+    });
+}
+
+async function check() {
+    const data = {
+        email: document.getElementById("email").value,
+        password: document.getElementById("password").value,
+        server: document.getElementById("server").value,
+    };
+
+    await fetch("/check", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(data)
+    });
+
+    loadResults();
+}
+
+loadResults();
+</script>
+
+</body>
+</html>
