@@ -1,10 +1,10 @@
 from fastapi import FastAPI, Form
 from fastapi.middleware.cors import CORSMiddleware
-import imaplib
+import re
 
 app = FastAPI()
 
-# السماح بالوصول من أي مصدر للواجهة
+# السماح للواجهة بالتواصل مع السيرفر
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -12,26 +12,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# تحقق من البريد الإلكتروني
+def is_valid_email(email: str):
+    regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+    return re.match(regex, email) is not None
+
+# تحقق من كلمة السر (مثال: 8 حروف على الأقل)
+def is_valid_password(password: str):
+    return len(password) >= 8
+
+@app.post("/check")
+async def check_email(email: str = Form(...), password: str = Form(...)):
+    return {
+        "email_valid": is_valid_email(email),
+        "password_valid": is_valid_password(password)
+    }
+
 @app.get("/")
 def home():
     return {"message": "Email Checker API Running"}
-
-@app.post("/check")
-def check_email(email: str = Form(...), password: str = Form(...), provider: str = Form(...)):
-    imap_servers = {
-        "gmail": "imap.gmail.com",
-        "yahoo": "imap.mail.yahoo.com",
-        "outlook": "imap-mail.outlook.com"
-    }
-
-    server = imap_servers.get(provider.lower())
-    if not server:
-        return {"status": "fail", "message": "Unsupported provider"}
-
-    try:
-        mail = imaplib.IMAP4_SSL(server)
-        mail.login(email, password)
-        mail.logout()
-        return {"status": "success", "message": "Password is valid"}
-    except imaplib.IMAP4.error:
-        return {"status": "fail", "message": "Invalid email or password"}
