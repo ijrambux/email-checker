@@ -1,45 +1,37 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Form
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 import imaplib
 
 app = FastAPI()
 
+# السماح بالوصول من أي مصدر للواجهة
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-class LoginData(BaseModel):
-    email: str
-    password: str
-    server: str = "imap.gmail.com"
+@app.get("/")
+def home():
+    return {"message": "Email Checker API Running"}
 
-results = []
+@app.post("/check")
+def check_email(email: str = Form(...), password: str = Form(...), provider: str = Form(...)):
+    imap_servers = {
+        "gmail": "imap.gmail.com",
+        "yahoo": "imap.mail.yahoo.com",
+        "outlook": "imap-mail.outlook.com"
+    }
 
-def check_email_password(email, password, server):
+    server = imap_servers.get(provider.lower())
+    if not server:
+        return {"status": "fail", "message": "Unsupported provider"}
+
     try:
         mail = imaplib.IMAP4_SSL(server)
         mail.login(email, password)
         mail.logout()
-        return True
-    except:
-        return False
-
-@app.post("/check")
-def check_password(data: LoginData):
-    ok = check_email_password(data.email, data.password, data.server)
-    result = {"email": data.email, "server": data.server, "valid": ok}
-    results.append(result)
-    return result
-
-@app.get("/results")
-def get_results():
-    return results
-
-@app.get("/")
-def home():
-    return {"message": "Email Checker API Running"}
+        return {"status": "success", "message": "Password is valid"}
+    except imaplib.IMAP4.error:
+        return {"status": "fail", "message": "Invalid email or password"}
